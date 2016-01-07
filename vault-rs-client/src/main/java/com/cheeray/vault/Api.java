@@ -23,7 +23,6 @@ import com.cheeray.vault.jsonm.Secret;
 import com.cheeray.vault.jsonm.SecretBackend;
 import com.cheeray.vault.jsonm.SecretConfig;
 import com.cheeray.vault.jsonm.SecretLease;
-import com.cheeray.vault.jsonm.SessionStatus;
 import com.cheeray.vault.jsonm.UnsealRequest;
 
 /**
@@ -87,11 +86,6 @@ public interface Api {
 		@Headers({ ACCEPT_APPLICATION_JSON })
 		Call<Void> delete(@Path("mountPoint") String mountPoint,
 				@Header(X_VAULT_TOKEN) String token);
-
-		@POST("/v1/auth/userpass/login/{username}")
-		@Headers({ CONTENT_TYPE_APPLICATION_JSON, ACCEPT_APPLICATION_JSON })
-		Call<SessionStatus> login(@Path("username") String username,
-				@Body String password);
 	}
 
 	/**
