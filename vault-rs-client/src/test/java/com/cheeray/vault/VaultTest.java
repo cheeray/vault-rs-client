@@ -8,6 +8,8 @@ import java.io.IOException;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.cheeray.vault.jsonm.InitCredentials;
+
 public class VaultTest extends BaseTest {
 
 	@Test
@@ -31,7 +33,8 @@ public class VaultTest extends BaseTest {
 	@Test
 	public final void testLocal() throws Exception {
 		try (Vault v = new Vault("etc/vault", configPath, 8200, 3)) {
-			v.open(null);
+			final InitCredentials cred = v.init(1, 1);
+			v.open(cred.getRootToken(), cred.getKeys());
 			v.write("a", "b");
 			String value = v.read("a");
 			assertNotNull(value);

@@ -3,7 +3,6 @@ package com.cheeray.vault;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
-import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,6 +137,13 @@ public class Vault implements Closeable {
 		exec(store.write(key, new Secret(value), credentials.getRootToken()));
 	}
 
+	public InitCredentials init(int shares, int threshold)
+			throws VaultException {
+		final SecretConfig cfg = new SecretConfig(shares, threshold);
+		LOG.info("Initializes a new Vault.");
+		return init(cfg, maxRetires);
+	}
+
 	/**
 	 * Open the vault.
 	 * 
@@ -148,9 +154,11 @@ public class Vault implements Closeable {
 	 */
 	public void open(String token, String... keys) throws VaultException,
 			IOException {
-		credentials = token == null ? null : new InitCredentials(token, keys);
-
-		init(maxRetires);
+		if (token == null || keys == null) {
+			throw new VaultException("Missing root token and keys.");
+		}
+		credentials = new InitCredentials(token, keys);
+		init(null, maxRetires);
 
 		if (credentials == null) {
 			throw new VaultException("Boot failed.");
@@ -169,22 +177,23 @@ public class Vault implements Closeable {
 		// Read write
 	}
 
-	private void init(int retries) throws VaultException {
+	private InitCredentials init(SecretConfig cfg, int retries)
+			throws VaultException {
 		try {
 			Response<InitStatus> statusRsp = init.getInitStatus(
 					credentials != null ? credentials.getRootToken() : null)
 					.execute();
 			InitStatus initStatus = statusRsp.body();
 			if (!initStatus.isInitialized()) {
-				LOG.info("Initializes a new Vault.");
-				final SecretConfig cfg = new SecretConfig(1, 1);
-				credentials = exec(init.init(cfg));
-				// TODO: persist credentials ...
-				LOG.info(credentials.getRootToken());
-				LOG.info(Arrays.toString(credentials.getKeys()));
+				if (cfg != null) {
+					return exec(init.init(cfg));
+				} else {
+					throw new VaultException("Vault is not initialised.");
+				}
 			} else if (credentials == null) {
 				throw new VaultException("Token and keys are required.");
 			}
+			return credentials;
 		} catch (IOException e) {
 			if (retries > 0) {
 				retries--;
@@ -201,7 +210,7 @@ public class Vault implements Closeable {
 					} catch (InterruptedException ex) {
 						LOG.error("Interrupted while booting.");
 					}
-					init(retries);
+					return init(cfg, retries);
 				} else {
 					throw new VaultException("Please start the remote Vault.");
 				}
